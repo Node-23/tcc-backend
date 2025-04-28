@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: tcc-backend
+  profiles:
+    active: dev
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
+
+logging:
+  file:
+    path: home/log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+jwt:
+  private:
+    key: classpath:private_key.pem
+  public:
+    key: classpath:public_key.pem
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8082
+
+logging:
+  file:
+    path: /var/log/myapp
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+jwt:
+  private:
+    key: classpath:private_key.pem
+  public:
+    key: classpath:public_key.pem
