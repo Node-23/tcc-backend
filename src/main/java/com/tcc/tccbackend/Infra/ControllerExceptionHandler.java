@@ -2,6 +2,7 @@ package com.tcc.tccbackend.Infra;
 
 import com.tcc.tccbackend.DTO.ExceptionDTO;
 import com.tcc.tccbackend.Exceptions.FieldAlreadyInUseException;
+import com.tcc.tccbackend.Exceptions.InvalidDataException;
 import com.tcc.tccbackend.Exceptions.InvalidEmailException;
 import com.tcc.tccbackend.Exceptions.PasswordRulesException;
 import org.springframework.http.ResponseEntity;
@@ -35,9 +36,16 @@ public class ControllerExceptionHandler {
         return ResponseEntity.badRequest().body(exceptionDTO);
     }
 
+    @ExceptionHandler(InvalidDataException.class)
+    public ResponseEntity<ExceptionDTO> handleInvalidDataException(InvalidDataException exception) {
+        ExceptionDTO exceptionDTO = new ExceptionDTO(exception.getMessage(), "400");
+        return ResponseEntity.badRequest().body(exceptionDTO);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionDTO> handleGeneralException(Exception exception) {
         ExceptionDTO exceptionDTO = new ExceptionDTO(exception.getMessage(), "500");
         return ResponseEntity.internalServerError().body(exceptionDTO);
     }
+
 }

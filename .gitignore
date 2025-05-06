@@ -39,3 +39,4 @@ build/
 /home/log/spring.log
 /src/main/resources/public_key.pem
 /src/main/resources/private_key.pem
+/home/
