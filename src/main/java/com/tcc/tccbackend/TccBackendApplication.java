@@ -16,6 +16,10 @@ public class TccBackendApplication {
             System.setProperty("POSTGRES_USER", Objects.requireNonNull(dotenv.get("POSTGRES_USER")));
             System.setProperty("POSTGRES_PASSWORD", Objects.requireNonNull(dotenv.get("POSTGRES_PASSWORD")));
             System.setProperty("SPRING_DATASOURCE_URL", Objects.requireNonNull(dotenv.get("SPRING_DATASOURCE_URL")));
+            System.setProperty("AWS_ACCESS_KEY_ID", Objects.requireNonNull(dotenv.get("AWS_ACCESS_KEY_ID")));
+            System.setProperty("AWS_ACCESS_KEY_SECRET", Objects.requireNonNull(dotenv.get("AWS_ACCESS_KEY_SECRET")));
+            System.setProperty("AWS_REGION", Objects.requireNonNull(dotenv.get("AWS_REGION")));
+            System.setProperty("S3_BUCKET_NAME", Objects.requireNonNull(dotenv.get("S3_BUCKET_NAME")));
         }
 
         SpringApplication.run(TccBackendApplication.class, args);

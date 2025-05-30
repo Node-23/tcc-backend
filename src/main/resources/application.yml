@@ -38,6 +38,12 @@ jwt:
   public:
     key: classpath:public_key.pem
 
+aws:
+  s3:
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_ACCESS_KEY_SECRET}
+    region: ${AWS_REGION}
+    bucket-name: ${S3_BUCKET_NAME}
 ---
 
 spring:
@@ -71,3 +77,10 @@ jwt:
     key: classpath:private_key.pem
   public:
     key: classpath:public_key.pem
+
+aws:
+  s3:
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_ACCESS_KEY_SECRET}
+    region: ${AWS_REGION}
+    bucket-name: ${S3_BUCKET_NAME}
