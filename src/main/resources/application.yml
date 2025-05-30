@@ -16,6 +16,10 @@ spring:
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
 
+  data:
+    mongodb:
+      uri: {MONGO_DB_URI}
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -55,6 +59,10 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
+
+  data:
+    mongodb:
+      uri: {MONGO_DB_URI}
 
   jpa:
     hibernate:
