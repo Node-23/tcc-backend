@@ -16,23 +16,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final LogService logService;
     private final Logger logger = LoggerFactory.getLogger(ProductService.class);
     private final AmazonS3 s3Client;
 
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
 
-    public ProductService(ProductRepository productRepository, UserRepository userRepository, AmazonS3 s3Client) {
+    public ProductService(ProductRepository productRepository, UserRepository userRepository, LogService logService, AmazonS3 s3Client) {
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.logService = logService;
         this.s3Client = s3Client;
     }
 
@@ -52,7 +53,7 @@ public class ProductService {
                 throw new RuntimeException(e);
             }
             newProduct.setPhoto(fileUrl);
-            this.productRepository.save(newProduct);
+            SaveProduct(newProduct);
         }
         return newProduct;
     }
@@ -81,14 +82,27 @@ public class ProductService {
 
     private void SaveProduct(Product product){
         ValidateProduct(product);
-        //TODO: send file to bucket
         try{
-            logger.info("Product id: {}, User Product: {} saved - OS: {}", product.getId(), product.getName(), System.getProperty("os.name"));
             this.productRepository.save(product);
+
+            Map<String, Object> metadataSuccess = new HashMap<>();
+            metadataSuccess.put("productId", product.getId());
+            metadataSuccess.put("productName", product.getName());
+            metadataSuccess.put("os", System.getProperty("os.name"));
+            logService.info("Product saved successfully: " + metadataSuccess, "ProductService.SaveProduct", "SaveProduct", product.getOwner().getId().toString());
+
         } catch (Exception e) {
+            Map<String, Object> metadataError = new HashMap<>();
+            metadataError.put("productId", product.getId());
+            metadataError.put("productName", product.getName()); // Usar getProductName() se existir
+            metadataError.put("os", System.getProperty("os.name"));
+            metadataError.put("errorMessage", e.getMessage());
+            metadataError.put("stackTrace", e.toString()); // Captura a stack trace completa da exceção
+            logService.error("Failed to save product: " + metadataError, "ProductService.SaveProduct", "SaveProduct", product.getOwner().getId().toString(), "", Arrays.toString(e.getStackTrace()));
+
             String msg = "Product id: "+product.getId()+", Product name: "+product.getName()+" - Error: "+ e.getMessage() +" - OS: " + System.getProperty("os.name") + "\n Stacktrace: " + e;
             logger.error(msg);
-//            emailService.sendEmail("User id: " + user.getId() + " , User name:" + user.getName() + " - Data integrity error", msg);
+            // emailService.sendEmail("User id: " + user.getId() + " , User name:" + user.getName() + " - Data integrity error", msg);
             throw new RuntimeException(e);
         }
     }
