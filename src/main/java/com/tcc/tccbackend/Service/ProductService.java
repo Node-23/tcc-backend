@@ -1,24 +1,23 @@
 package com.tcc.tccbackend.Service;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.tcc.tccbackend.DTO.ProductDTO;
-import com.tcc.tccbackend.Exceptions.FieldAlreadyInUseException;
 import com.tcc.tccbackend.Exceptions.InvalidDataException;
-import com.tcc.tccbackend.Exceptions.InvalidEmailException;
-import com.tcc.tccbackend.Exceptions.PasswordRulesException;
 import com.tcc.tccbackend.Model.Product;
 import com.tcc.tccbackend.Model.User;
 import com.tcc.tccbackend.Repository.ProductRepository;
 import com.tcc.tccbackend.Repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class ProductService {
@@ -26,20 +25,58 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final Logger logger = LoggerFactory.getLogger(ProductService.class);
+    private final AmazonS3 s3Client;
 
-    public ProductService(ProductRepository productRepository, UserRepository userRepository) {
+    @Value("${aws.s3.bucket-name}")
+    private String bucketName;
+
+    public ProductService(ProductRepository productRepository, UserRepository userRepository, AmazonS3 s3Client) {
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.s3Client = s3Client;
     }
 
     public Iterable<Product> findAllProducts() {
         return productRepository.findAll();
     }
 
-    public Product createProduct(ProductDTO productDTO, MultipartFile file){
+    public Product createProduct(ProductDTO productDTO, MultipartFile imageFile){
         Product newProduct = convertDtoToProduct(productDTO);
-        this.SaveProduct(newProduct);
+
+        if (imageFile != null && !imageFile.isEmpty()) {
+            String fileName = generateFileName(newProduct.getName(), imageFile.getOriginalFilename());
+            String fileUrl = null;
+            try {
+                fileUrl = uploadFileToS3(imageFile, fileName);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            newProduct.setPhoto(fileUrl);
+            this.productRepository.save(newProduct);
+        }
         return newProduct;
+    }
+
+    private String generateFileName(String productName, String originalFileName) {
+        String cleanedProductName = productName.replaceAll("[^a-zA-Z0-9.-]", "_");
+        String fileExtension = "";
+        int dotIndex = originalFileName.lastIndexOf('.');
+        if (dotIndex > 0) {
+            fileExtension = originalFileName.substring(dotIndex);
+        }
+        return cleanedProductName + "_" + fileExtension;
+    }
+
+    private String uploadFileToS3(MultipartFile file, String fileName) throws IOException {
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(file.getSize());
+        metadata.setContentType(file.getContentType());
+
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, fileName, file.getInputStream(), metadata); // LINHA ALTERADA
+
+        s3Client.putObject(putObjectRequest);
+
+        return s3Client.getUrl(bucketName, fileName).toString();
     }
 
     private void SaveProduct(Product product){
