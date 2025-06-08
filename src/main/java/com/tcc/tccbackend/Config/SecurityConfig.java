@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -36,6 +37,12 @@ public class SecurityConfig {
     @Value("${jwt.private.key}")
     private RSAPrivateKey priv;
 
+    private final CustomOAuth2AuthenticationSuccessHandler customOAuth2AuthenticationSuccessHandler;
+
+    public SecurityConfig(@Lazy CustomOAuth2AuthenticationSuccessHandler customOAuth2AuthenticationSuccessHandler) {
+        this.customOAuth2AuthenticationSuccessHandler = customOAuth2AuthenticationSuccessHandler;
+    }
+
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -44,8 +51,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/users/register").permitAll()
                         .requestMatchers("/user/authenticate", "/api/v1/users/login").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/login/oauth2/code/google").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2Login -> oauth2Login
+                        .successHandler(customOAuth2AuthenticationSuccessHandler)
                 )
                 .oauth2ResourceServer(conf -> conf.jwt(jwt -> jwt.decoder(jwtDecoder())));
         return http.build();

@@ -21,6 +21,9 @@ public class TccBackendApplication {
             System.setProperty("AWS_ACCESS_KEY_SECRET", Objects.requireNonNull(dotenv.get("AWS_ACCESS_KEY_SECRET")));
             System.setProperty("AWS_REGION", Objects.requireNonNull(dotenv.get("AWS_REGION")));
             System.setProperty("S3_BUCKET_NAME", Objects.requireNonNull(dotenv.get("S3_BUCKET_NAME")));
+            System.setProperty("GOOGLE_OAUTH_ID", Objects.requireNonNull(dotenv.get("GOOGLE_OAUTH_ID")));
+            System.setProperty("GOOGLE_OAUTH_SECRET", Objects.requireNonNull(dotenv.get("GOOGLE_OAUTH_SECRET")));
+            System.setProperty("FRONTEND_URL", Objects.requireNonNull(dotenv.get("FRONTEND_URL")));
         }
 
         SpringApplication.run(TccBackendApplication.class, args);
