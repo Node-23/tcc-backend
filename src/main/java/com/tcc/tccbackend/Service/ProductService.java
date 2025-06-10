@@ -45,15 +45,16 @@ public class ProductService {
         Product newProduct = convertDtoToProduct(productDTO);
 
         if (imageFile != null && !imageFile.isEmpty()) {
-            String fileName = generateFileName(newProduct.getName(), imageFile.getOriginalFilename());
-            String fileUrl = null;
+            String fileName = generateFileName(newProduct.getName(), Objects.requireNonNull(imageFile.getOriginalFilename()));
+            String fileUrl;
             try {
+                SaveProduct(newProduct);
                 fileUrl = uploadFileToS3(imageFile, fileName);
+                newProduct.setPhoto(fileUrl);
+                this.productRepository.save(newProduct);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            newProduct.setPhoto(fileUrl);
-            SaveProduct(newProduct);
         }
         return newProduct;
     }
@@ -73,7 +74,7 @@ public class ProductService {
         metadata.setContentLength(file.getSize());
         metadata.setContentType(file.getContentType());
 
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, fileName, file.getInputStream(), metadata); // LINHA ALTERADA
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, fileName, file.getInputStream(), metadata);
 
         s3Client.putObject(putObjectRequest);
 
@@ -94,10 +95,10 @@ public class ProductService {
         } catch (Exception e) {
             Map<String, Object> metadataError = new HashMap<>();
             metadataError.put("productId", product.getId());
-            metadataError.put("productName", product.getName()); // Usar getProductName() se existir
+            metadataError.put("productName", product.getName());
             metadataError.put("os", System.getProperty("os.name"));
             metadataError.put("errorMessage", e.getMessage());
-            metadataError.put("stackTrace", e.toString()); // Captura a stack trace completa da exceção
+            metadataError.put("stackTrace", e.toString());
             logService.error("Failed to save product: " + metadataError, "ProductService.SaveProduct", "SaveProduct", product.getOwner().getId().toString(), "", Arrays.toString(e.getStackTrace()));
 
             String msg = "Product id: "+product.getId()+", Product name: "+product.getName()+" - Error: "+ e.getMessage() +" - OS: " + System.getProperty("os.name") + "\n Stacktrace: " + e;
