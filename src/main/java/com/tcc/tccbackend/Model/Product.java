@@ -1,5 +1,6 @@
 package com.tcc.tccbackend.Model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tcc.tccbackend.DTO.ProductDTO;
 import com.tcc.tccbackend.Repository.UserRepository;
 import jakarta.persistence.*;
@@ -32,6 +33,7 @@ public class Product implements Serializable {
     private String photo;
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "owner_id", nullable = false)
+    @JsonIgnore
     private User owner;
 
 
