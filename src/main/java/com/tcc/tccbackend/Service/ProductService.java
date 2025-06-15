@@ -45,17 +45,17 @@ public class ProductService {
     public Product createProduct(ProductDTO productDTO, MultipartFile imageFile){
         Product newProduct = convertDtoToProduct(productDTO);
 
-        if (imageFile != null && !imageFile.isEmpty()) {
-            String fileName = generateFileName(newProduct.getName(), Objects.requireNonNull(imageFile.getOriginalFilename()));
-            String fileUrl;
-            try {
-                SaveProduct(newProduct);
+        try {
+            SaveProduct(newProduct);
+            if (imageFile != null && !imageFile.isEmpty()) {
+                String fileName = generateFileName(newProduct.getName(), Objects.requireNonNull(imageFile.getOriginalFilename()));
+                String fileUrl;
                 fileUrl = uploadFileToS3(imageFile, fileName);
                 newProduct.setPhoto(fileUrl);
-                this.productRepository.save(newProduct);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
             }
+            this.productRepository.save(newProduct);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         return newProduct;
     }

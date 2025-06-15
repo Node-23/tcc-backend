@@ -44,10 +44,13 @@ public class SaleItem implements Serializable {
     public SaleItem() {
     }
 
-    public SaleItem(Long productId, int quantity, BigDecimal price, BigDecimal discount) {
+    public SaleItem(Long productId, int quantity, BigDecimal price) {
         this.productId = productId;
         this.quantity = quantity;
         this.price = price;
-        this.discount = discount;
+    }
+
+    public BigDecimal getTotal(){
+        return price.multiply(BigDecimal.valueOf(quantity));
     }
 }

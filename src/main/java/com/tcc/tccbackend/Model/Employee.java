@@ -9,7 +9,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @Entity(name = "employees")
@@ -42,7 +42,7 @@ public class Employee implements Serializable {
     private BigDecimal salary;
 
     @NotNull
-    private LocalDateTime hiredate;
+    private LocalDate hiredate;
 
     @NotBlank
     private String status;

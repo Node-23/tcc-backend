@@ -9,6 +9,5 @@ import java.math.BigDecimal;
 public record SaleItemDTO(
         @NotNull Long productId,
         @NotNull @PositiveOrZero int quantity,
-        @NotNull @PositiveOrZero BigDecimal price,
-        @NotNull @PositiveOrZero BigDecimal discount
+        @NotNull @PositiveOrZero BigDecimal price
 ) implements Serializable {}

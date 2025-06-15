@@ -2,7 +2,7 @@ package com.tcc.tccbackend.DTO;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 public record EmployeeDTO(
         Long id,
@@ -12,6 +12,6 @@ public record EmployeeDTO(
         String address,
         String role,
         BigDecimal salary,
-        LocalDateTime hiredate,
+        LocalDate hiredate,
         String status
 ) implements Serializable {}

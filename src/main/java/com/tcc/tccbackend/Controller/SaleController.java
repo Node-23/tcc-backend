@@ -1,6 +1,8 @@
 package com.tcc.tccbackend.Controller;
 
+import com.tcc.tccbackend.DTO.OutputSaleDTO;
 import com.tcc.tccbackend.DTO.SaleDTO;
+import com.tcc.tccbackend.DTO.SalesOverviewDTO;
 import com.tcc.tccbackend.Model.Sale;
 import com.tcc.tccbackend.Service.SaleService;
 import jakarta.validation.Valid;
@@ -22,9 +24,15 @@ public class SaleController {
     }
 
     @GetMapping
-    public ResponseEntity<Iterable<Sale>> getAllSales() {
-        Iterable<Sale> sales = saleService.findAllSales();
+    public ResponseEntity<Iterable<OutputSaleDTO>> getAllSales() {
+        Iterable<OutputSaleDTO> sales = saleService.findAllSales();
         return new ResponseEntity<>(sales, HttpStatus.OK);
+    }
+
+    @GetMapping("/overview")
+    public ResponseEntity<SalesOverviewDTO> getSalesOverview() {
+        SalesOverviewDTO salesOverview = saleService.getSalesOverview();
+        return new ResponseEntity<>(salesOverview, HttpStatus.OK);
     }
 
     @PostMapping
@@ -45,8 +53,8 @@ public class SaleController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @GetMapping("{id}")
-    public Optional<Sale> getSaleById(@PathVariable Long id) {
+    @GetMapping("/{id}")
+    public Optional<OutputSaleDTO> getSaleById(@PathVariable Long id) {
         return saleService.findSaleById(id);
     }
 }

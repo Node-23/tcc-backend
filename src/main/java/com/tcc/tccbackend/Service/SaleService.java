@@ -1,8 +1,12 @@
 package com.tcc.tccbackend.Service;
 
+import com.tcc.tccbackend.DTO.OutputSaleDTO;
 import com.tcc.tccbackend.DTO.SaleDTO;
 import com.tcc.tccbackend.DTO.SaleItemDTO;
+import com.tcc.tccbackend.DTO.SalesOverviewDTO;
 import com.tcc.tccbackend.Exceptions.InvalidDataException;
+import com.tcc.tccbackend.Model.Customer;
+import com.tcc.tccbackend.Model.Employee;
 import com.tcc.tccbackend.Model.Product;
 import com.tcc.tccbackend.Model.Sale;
 import com.tcc.tccbackend.Model.SaleItem;
@@ -19,6 +23,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class SaleService {
@@ -26,7 +31,7 @@ public class SaleService {
     private final SaleRepository saleRepository;
     private final CustomerRepository customerRepository;
     private final EmployeeRepository employeeRepository;
-    private final ProductRepository productRepository;
+    private final ProductRepository productRepository; // Já injetado
     private final LogService logService;
     private final Logger logger = LoggerFactory.getLogger(SaleService.class);
 
@@ -40,8 +45,18 @@ public class SaleService {
         this.logService = logService;
     }
 
-    public Iterable<Sale> findAllSales() {
-        return saleRepository.findAll();
+    public Iterable<OutputSaleDTO> findAllSales() {
+        return saleRepository.findAll().stream()
+                .map(this::convertToOutputSaleDTO)
+                .collect(Collectors.toList());
+    }
+
+    public SalesOverviewDTO getSalesOverview() {
+        List<Customer> customers = (List<Customer>) customerRepository.findAll();
+        List<Employee> employees = (List<Employee>) employeeRepository.findAll();
+        List<OutputSaleDTO> sales = (List<OutputSaleDTO>) findAllSales();
+        List<Product> products = productRepository.findAll();
+        return new SalesOverviewDTO(customers, employees, sales, products);
     }
 
     @Transactional
@@ -71,7 +86,7 @@ public class SaleService {
             }
             Product product = productOptional.get();
 
-            if (itemDTO.quantity() <= 0 || itemDTO.price().compareTo(BigDecimal.ZERO) < 0 || itemDTO.discount().compareTo(BigDecimal.ZERO) < 0) {
+            if (itemDTO.quantity() <= 0 || itemDTO.price().compareTo(BigDecimal.ZERO) < 0) {
                 throw new InvalidDataException("Quantidade, preço e desconto dos itens da venda devem ser valores positivos ou zero.");
             }
             if (itemDTO.quantity() > product.getQuantity()) {
@@ -82,9 +97,11 @@ public class SaleService {
             product.setQuantity(product.getQuantity() - itemDTO.quantity());
             productsToUpdate.add(product);
 
-            newSale.addSaleItem(new SaleItem(itemDTO.productId(), itemDTO.quantity(), itemDTO.price(), itemDTO.discount()));
+            newSale.addSaleItem(new SaleItem(itemDTO.productId(), itemDTO.quantity(), itemDTO.price()));
         }
 
+        newSale.setTotal(newSale.getItems().stream().map(SaleItem::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add));
+        newSale.setStatus("FINALIZADA");
         ValidateSale(newSale);
 
         try {
@@ -146,7 +163,7 @@ public class SaleService {
             }
             Product product = productOptional.get();
 
-            if (itemDTO.quantity() <= 0 || itemDTO.price().compareTo(BigDecimal.ZERO) < 0 || itemDTO.discount().compareTo(BigDecimal.ZERO) < 0) {
+            if (itemDTO.quantity() <= 0 || itemDTO.price().compareTo(BigDecimal.ZERO) < 0) {
                 throw new InvalidDataException("Quantidade, preço e desconto dos itens da venda devem ser valores positivos ou zero.");
             }
             if (itemDTO.quantity() > product.getQuantity()) {
@@ -157,7 +174,7 @@ public class SaleService {
             product.setQuantity(product.getQuantity() - itemDTO.quantity());
             productsToUpdate.add(product);
 
-            existingSale.addSaleItem(new SaleItem(itemDTO.productId(), itemDTO.quantity(), itemDTO.price(), itemDTO.discount()));
+            existingSale.addSaleItem(new SaleItem(itemDTO.productId(), itemDTO.quantity(), itemDTO.price()));
         }
 
         ValidateSale(existingSale);
@@ -201,8 +218,8 @@ public class SaleService {
         }
     }
 
-    public Optional<Sale> findSaleById(Long id) {
-        return saleRepository.findById(id);
+    public Optional<OutputSaleDTO> findSaleById(Long id) {
+        return saleRepository.findById(id).map(this::convertToOutputSaleDTO);
     }
 
     private void ValidateSale(Sale sale) {
@@ -215,5 +232,27 @@ public class SaleService {
         if (sale.getItems().isEmpty()) {
             throw new InvalidDataException("A venda deve conter pelo menos um item.");
         }
+    }
+
+    private OutputSaleDTO convertToOutputSaleDTO(Sale sale) {
+        Customer client = customerRepository.findById(sale.getClientId())
+                .orElseThrow(() -> new InvalidDataException("Cliente não encontrado para a venda com ID: " + sale.getId()));
+        Employee employee = employeeRepository.findById(sale.getEmployeeId())
+                .orElseThrow(() -> new InvalidDataException("Funcionário não encontrado para a venda com ID: " + sale.getId()));
+
+        List<SaleItemDTO> itemDTOs = sale.getItems().stream()
+                .map(item -> new SaleItemDTO(item.getProductId(), item.getQuantity(), item.getPrice()))
+                .collect(Collectors.toList());
+
+        return new OutputSaleDTO(
+                sale.getId(),
+                client,
+                employee,
+                sale.getDate(),
+                sale.getPaymentMethod(),
+                sale.getStatus(),
+                sale.getTotal(),
+                itemDTOs
+        );
     }
 }
