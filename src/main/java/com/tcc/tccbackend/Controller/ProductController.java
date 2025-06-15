@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @CrossOrigin(origins = "*")
-@RequestMapping("/api/v1/products")
+@RequestMapping("/api/inventory/products/")
 public class ProductController {
 
     private final ProductService productService;
@@ -28,19 +28,34 @@ public class ProductController {
         return new ResponseEntity<>(products, HttpStatus.OK);
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<Iterable<Product>> getProductsByUser(@PathVariable Long userId) {
-        List<Product> products = productService.findProductByOwner(userId);
+    @GetMapping("{productId}")
+    public ResponseEntity<Iterable<Product>> getProductsByUser(@PathVariable Long productId) {
+        List<Product> products = productService.findProductByOwner(productId);
         return new ResponseEntity<>(products, HttpStatus.OK);
     }
 
-    @PostMapping(path = "/register",consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping(consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE})
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<Product> createProduct(
             @RequestPart("product") ProductDTO productData,
             @RequestPart(value = "image", required = false) MultipartFile imageFile) {
         Product newProduct = productService.createProduct(productData, imageFile);
         return new ResponseEntity<>(newProduct, HttpStatus.CREATED);
+    }
+
+    @PutMapping(path = "{productId}", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable Long productId,
+            @RequestPart("product") ProductDTO productData,
+            @RequestPart(value = "image", required = false) MultipartFile imageFile) {
+        Product updatedProduct = productService.updateProduct(productId, productData, imageFile);
+        return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+        productService.deleteProduct(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
 //    @GetMapping("/{name}")

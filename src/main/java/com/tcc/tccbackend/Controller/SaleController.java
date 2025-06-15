@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @RestController
 @CrossOrigin(origins = "*")
-@RequestMapping("/api/v1/sales")
+@RequestMapping("/api/sales/")
 public class SaleController {
 
     private final SaleService saleService;
@@ -27,25 +27,25 @@ public class SaleController {
         return new ResponseEntity<>(sales, HttpStatus.OK);
     }
 
-    @PostMapping("/register")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Sale createSale(@RequestBody @Valid SaleDTO saleDTO) {
         return saleService.createSale(saleDTO);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("{id}")
     public ResponseEntity<Sale> updateSale(@PathVariable Long id, @RequestBody @Valid SaleDTO saleDTO) {
         Sale updatedSale = saleService.updateSale(id, saleDTO);
         return new ResponseEntity<>(updatedSale, HttpStatus.OK);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("{id}")
     public ResponseEntity<Void> deleteSale(@PathVariable Long id) {
         saleService.deleteSale(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("{id}")
     public Optional<Sale> getSaleById(@PathVariable Long id) {
         return saleService.findSaleById(id);
     }

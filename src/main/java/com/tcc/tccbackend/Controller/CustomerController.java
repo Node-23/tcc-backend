@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @RestController
 @CrossOrigin(origins = "*")
-@RequestMapping("/api/v1/customers")
+@RequestMapping("/api/customers/")
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -28,25 +28,25 @@ public class CustomerController {
         return new ResponseEntity<>(customers, HttpStatus.OK);
     }
 
-    @PostMapping("/register")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Customer createCustomer(@RequestBody @Valid CustomerDTO customerDTO) {
         return customerService.createCustomer(customerDTO);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("{id}")
     public ResponseEntity<Customer> updateCustomer(@PathVariable Long id, @RequestBody @Valid CustomerDTO customerDTO) {
         Customer updatedCustomer = customerService.updateCustomer(id, customerDTO);
         return new ResponseEntity<>(updatedCustomer, HttpStatus.OK);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("{id}")
     public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @GetMapping("/{email}")
+    @GetMapping("{email}")
     public Optional<Customer> getCustomerByEmail(@PathVariable String email) {
         return customerService.findCustomerByEmail(email);
     }

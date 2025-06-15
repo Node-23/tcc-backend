@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @RestController
 @CrossOrigin(origins = "*")
-@RequestMapping("/api/v1/users")
+@RequestMapping("/api/users/")
 public class UserController {
 
     private final UserService userService;
@@ -28,19 +28,19 @@ public class UserController {
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
-    @PostMapping("/register")
+    @PostMapping("auth/register")
     @ResponseStatus(HttpStatus.CREATED)
     public User createUser(@RequestBody @Valid UserDTO user) {
         return userService.createUser(user);
     }
 
-    @PostMapping("/login")
+    @PostMapping("auth/login")
     public ResponseEntity<User> Login(@RequestBody LoginDTO loginDTO){
         User newUser = userService.Login(loginDTO);
         return new ResponseEntity<>(newUser, HttpStatus.OK);
     }
 
-    @GetMapping("/{email}")
+    @GetMapping("{email}")
     public Optional<User> getUserByEmail(@PathVariable String email) {
         return userService.findUserByEmail(email);
     }

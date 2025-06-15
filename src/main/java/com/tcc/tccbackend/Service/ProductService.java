@@ -12,6 +12,7 @@ import com.tcc.tccbackend.Repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -57,6 +58,68 @@ public class ProductService {
             }
         }
         return newProduct;
+    }
+
+    public Product updateProduct(Long id, ProductDTO productDTO, MultipartFile imageFile) {
+        Optional<Product> existingProductOptional = productRepository.findById(id);
+        if (existingProductOptional.isEmpty()) {
+            logService.warn("Attempted to update non-existent product with ID: " + id, "ProductService.updateProduct", "updateProduct", id.toString(), null, null);
+            throw new InvalidDataException("Produto não encontrado com o ID: " + id);
+        }
+
+        Product existingProduct = existingProductOptional.get();
+
+//        User owner = userRepository.findById(productDTO.ownerId())
+//                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+
+        existingProduct.setName(productDTO.name());
+        existingProduct.setCode(productDTO.code());
+        existingProduct.setCategory(productDTO.category());
+        existingProduct.setPrice(productDTO.price());
+        existingProduct.setProfit(productDTO.profit());
+        existingProduct.setQuantity(productDTO.quantity());
+//        existingProduct.setOwner(owner);
+
+        if (imageFile != null && !imageFile.isEmpty()) {
+            String fileName = generateFileName(existingProduct.getName(), Objects.requireNonNull(imageFile.getOriginalFilename()));
+            String fileUrl;
+            try {
+                fileUrl = uploadFileToS3(imageFile, fileName);
+                existingProduct.setPhoto(fileUrl);
+            } catch (IOException e) {
+                logService.error("Failed to upload image for product update: " + e.getMessage(), "ProductService.updateProduct", "uploadFileToS3", existingProduct.getId().toString(), null, e.toString());
+                throw new RuntimeException("Erro ao fazer upload da imagem: " + e.getMessage(), e);
+            }
+        }
+
+        ValidateProduct(existingProduct);
+        try {
+            productRepository.save(existingProduct);
+            logService.info("Product updated successfully: " + existingProduct.getName() + " (ID: " + existingProduct.getId() + ")", "ProductService.updateProduct", "updateProduct", existingProduct.getId().toString());
+            return existingProduct;
+        } catch (DataIntegrityViolationException ex) {
+            String constrainField = GeneralService.getConstrainField(ex);
+            logService.error("Failed to update product due to data integrity: " + constrainField, "ProductService.updateProduct", "updateProduct", existingProduct.getId().toString(), "", ex.toString());
+            throw new InvalidDataException("Erro de integridade de dados ao atualizar produto: " + constrainField);
+        } catch (Exception e) {
+            logService.error("Failed to update product: " + e.getMessage(), "ProductService.updateProduct", "updateProduct", existingProduct.getId().toString(), "", e.toString());
+            throw new RuntimeException("Erro ao atualizar o produto: " + e.getMessage(), e);
+        }
+    }
+
+
+    public void deleteProduct(Long id) {
+        if (!productRepository.existsById(id)) {
+            logService.warn("Attempted to delete non-existent product with ID: " + id, "ProductService.deleteProduct", "deleteProduct", id.toString(), null, null);
+            throw new InvalidDataException("Produto não encontrado com o ID: " + id);
+        }
+        try {
+            productRepository.deleteById(id);
+            logService.info("Product with ID: " + id + " deleted successfully.", "ProductService.deleteProduct", "deleteProduct", id.toString());
+        } catch (Exception e) {
+            logService.error("Failed to delete product with ID: " + id + ". Error: " + e.getMessage(), "ProductService.deleteProduct", "deleteProduct", id.toString(), null, e.toString());
+            throw new RuntimeException("Erro ao deletar o produto com ID: " + id, e);
+        }
     }
 
     private String generateFileName(String productName, String originalFileName) {

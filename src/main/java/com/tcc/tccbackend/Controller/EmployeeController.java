@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @RestController
 @CrossOrigin(origins = "*")
-@RequestMapping("/api/v1/employees")
+@RequestMapping("/api/employees/")
 public class EmployeeController {
 
     private final EmployeeService employeeService;
@@ -27,25 +27,25 @@ public class EmployeeController {
         return new ResponseEntity<>(employees, HttpStatus.OK);
     }
 
-    @PostMapping("/register")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Employee createEmployee(@RequestBody @Valid EmployeeDTO employeeDTO) {
         return employeeService.createEmployee(employeeDTO);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("{id}")
     public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @RequestBody @Valid EmployeeDTO employeeDTO) {
         Employee updatedEmployee = employeeService.updateEmployee(id, employeeDTO);
         return new ResponseEntity<>(updatedEmployee, HttpStatus.OK);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("{id}")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @GetMapping("/{email}")
+    @GetMapping("{email}")
     public Optional<Employee> getEmployeeByEmail(@PathVariable String email) {
         return employeeService.findEmployeeByEmail(email);
     }
