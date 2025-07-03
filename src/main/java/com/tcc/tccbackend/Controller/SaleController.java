@@ -6,10 +6,13 @@ import com.tcc.tccbackend.DTO.SalesOverviewDTO;
 import com.tcc.tccbackend.Model.Sale;
 import com.tcc.tccbackend.Service.SaleService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Base64;
 import java.util.Optional;
 
 @RestController
@@ -29,7 +32,7 @@ public class SaleController {
         return new ResponseEntity<>(sales, HttpStatus.OK);
     }
 
-    @GetMapping("/overview")
+    @GetMapping("overview")
     public ResponseEntity<SalesOverviewDTO> getSalesOverview() {
         SalesOverviewDTO salesOverview = saleService.getSalesOverview();
         return new ResponseEntity<>(salesOverview, HttpStatus.OK);
@@ -53,8 +56,25 @@ public class SaleController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("{id}")
     public Optional<OutputSaleDTO> getSaleById(@PathVariable Long id) {
         return saleService.findSaleById(id);
+    }
+
+    @GetMapping("pdf/{saleId}")
+    public ResponseEntity<byte[]> getSaleInvoce(@PathVariable Long saleId) {
+        Optional<com.tcc.tccbackend.Model.PdfDocument> pdfDocumentOptional = saleService.findPdfBySaleId(saleId);
+        if (pdfDocumentOptional.isPresent()) {
+            com.tcc.tccbackend.Model.PdfDocument pdfDocument = pdfDocumentOptional.get();
+            byte[] decodedPdfBytes = Base64.getDecoder().decode(pdfDocument.getBase64Pdf());
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "fatura_" + saleId + ".pdf");
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+            return new ResponseEntity<>(decodedPdfBytes, headers, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 }

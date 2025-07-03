@@ -1,25 +1,26 @@
 package com.tcc.tccbackend.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tcc.tccbackend.DTO.OutputSaleDTO;
 import com.tcc.tccbackend.DTO.SaleDTO;
 import com.tcc.tccbackend.DTO.SaleItemDTO;
 import com.tcc.tccbackend.DTO.SalesOverviewDTO;
 import com.tcc.tccbackend.Exceptions.InvalidDataException;
-import com.tcc.tccbackend.Model.Customer;
-import com.tcc.tccbackend.Model.Employee;
-import com.tcc.tccbackend.Model.Product;
-import com.tcc.tccbackend.Model.Sale;
-import com.tcc.tccbackend.Model.SaleItem;
-import com.tcc.tccbackend.Repository.CustomerRepository;
-import com.tcc.tccbackend.Repository.EmployeeRepository;
-import com.tcc.tccbackend.Repository.ProductRepository;
-import com.tcc.tccbackend.Repository.SaleRepository;
+import com.tcc.tccbackend.Model.*;
+import com.tcc.tccbackend.Repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -31,16 +32,19 @@ public class SaleService {
     private final SaleRepository saleRepository;
     private final CustomerRepository customerRepository;
     private final EmployeeRepository employeeRepository;
-    private final ProductRepository productRepository; // Já injetado
+    private final PdfDocumentRepository pdfDocumentRepository;
+    private final ProductRepository productRepository;
     private final LogService logService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Logger logger = LoggerFactory.getLogger(SaleService.class);
 
     public SaleService(SaleRepository saleRepository, CustomerRepository customerRepository,
-                       EmployeeRepository employeeRepository, ProductRepository productRepository,
+                       EmployeeRepository employeeRepository, PdfDocumentRepository pdfDocumentRepository, ProductRepository productRepository,
                        LogService logService) {
         this.saleRepository = saleRepository;
         this.customerRepository = customerRepository;
         this.employeeRepository = employeeRepository;
+        this.pdfDocumentRepository = pdfDocumentRepository;
         this.productRepository = productRepository;
         this.logService = logService;
     }
@@ -106,12 +110,67 @@ public class SaleService {
 
         try {
             Sale savedSale = saleRepository.save(newSale);
+            Customer customer = customerRepository.getById(savedSale.getClientId());
             productRepository.saveAll(productsToUpdate);
+            String base64Pdf = callLambdaAndGetPdf(savedSale, customer);
+            String fileName = "sale_" + savedSale.getId() + ".pdf";
+
+            PdfDocument pdfDocument = new PdfDocument(savedSale.getId(), base64Pdf, fileName);
+            pdfDocumentRepository.save(pdfDocument); //
+            logService.info("PDF for sale ID: " + savedSale.getId() + " saved successfully to MongoDB.", "SaleService.createSale", "savePdf", savedSale.getId().toString());
             logService.info("Sale created successfully with ID: " + savedSale.getId(), "SaleService.createSale", "createSale", savedSale.getId().toString());
             return savedSale;
         } catch (Exception e) {
             logService.error("Failed to create sale: " + e.getMessage(), "SaleService.createSale", "createSale", null, null, e.toString());
             throw new RuntimeException("Erro ao criar a venda: " + e.getMessage(), e);
+        }
+    }
+
+    record InvoiceCustomer(String name, String address) {}
+    record InvoiceItem(String description, int quantity, BigDecimal unitPrice) {}
+    record InvoicePayload(String invoiceNumber, InvoiceCustomer customer, List<InvoiceItem> items) {}
+
+    private String callLambdaAndGetPdf(Sale sale, Customer customer) {
+        String lambdaUrl = "https://mogzipvuuf.execute-api.us-east-1.amazonaws.com/tcc/invoice";
+        HttpClient client = HttpClient.newHttpClient();
+
+        String invoiceNumber = String.format("%s-%03d",
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")),
+                sale.getId());
+
+        InvoiceCustomer invoiceCustomer = new InvoiceCustomer(customer.getName(), customer.getAddress());
+
+        List<InvoiceItem> invoiceItems = sale.getItems().stream()
+                .map(item -> new InvoiceItem(item.getProductName(), item.getQuantity(), item.getPrice()))
+                .collect(Collectors.toList());
+
+        InvoicePayload payload = new InvoicePayload(invoiceNumber, invoiceCustomer, invoiceItems);
+
+        String requestBody;
+        try {
+            requestBody = objectMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            logService.error("Error converting invoice payload to JSON for sale ID: " + sale.getId() + ". Error: " + e.getMessage(), "SaleService.callLambdaAndGetPdf", "jsonConversion", sale.getId().toString(), null, e.toString());
+            throw new RuntimeException("Erro ao converter payload da fatura para JSON: " + e.getMessage(), e);
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(lambdaUrl))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        try {
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                return response.body(); // A resposta da Lambda deve ser o PDF em Base64
+            } else {
+                logService.error("Lambda returned non-200 status for sale ID: " + sale.getId() + ". Status: " + response.statusCode() + ", Body: " + response.body(), "SaleService.callLambdaAndGetPdf", "httpCall", sale.getId().toString(), null, null);
+                throw new RuntimeException("Falha ao obter PDF da Lambda. Status: " + response.statusCode());
+            }
+        } catch (IOException | InterruptedException e) {
+            logService.error("Error calling Lambda for sale ID: " + sale.getId() + ". Error: " + e.getMessage(), "SaleService.callLambdaAndGetPdf", "httpCall", sale.getId().toString(), null, e.toString());
+            throw new RuntimeException("Erro ao chamar AWS Lambda para gerar PDF: " + e.getMessage(), e);
         }
     }
 
@@ -210,6 +269,9 @@ public class SaleService {
             }
             productRepository.saveAll(productsToRevert);
 
+            pdfDocumentRepository.findBySaleId(id).ifPresent(pdfDocumentRepository::delete);
+            logService.info("PDF for sale ID: " + id + " deleted successfully from MongoDB.", "SaleService.deleteSale", "deletePdf", id.toString());
+
             saleRepository.deleteById(id);
             logService.info("Sale with ID: " + id + " deleted successfully and product quantities reverted.", "SaleService.deleteSale", "deleteSale", id.toString());
         } catch (Exception e) {
@@ -232,6 +294,10 @@ public class SaleService {
         if (sale.getItems().isEmpty()) {
             throw new InvalidDataException("A venda deve conter pelo menos um item.");
         }
+    }
+
+    public Optional<PdfDocument> findPdfBySaleId(Long saleId) {
+        return pdfDocumentRepository.findBySaleId(saleId);
     }
 
     private OutputSaleDTO convertToOutputSaleDTO(Sale sale) {
