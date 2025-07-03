@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 
 public record SaleItemDTO(
         @NotNull Long productId,
+        @NotNull String productName,
         @NotNull @PositiveOrZero int quantity,
         @NotNull @PositiveOrZero BigDecimal price
 ) implements Serializable {}

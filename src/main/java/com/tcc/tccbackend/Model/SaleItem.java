@@ -23,6 +23,9 @@ public class SaleItem implements Serializable {
     private Long productId;
 
     @NotNull
+    private String productName;
+
+    @NotNull
     @PositiveOrZero
     private int quantity;
 
@@ -44,8 +47,9 @@ public class SaleItem implements Serializable {
     public SaleItem() {
     }
 
-    public SaleItem(Long productId, int quantity, BigDecimal price) {
+    public SaleItem(Long productId, String productName, int quantity, BigDecimal price) {
         this.productId = productId;
+        this.productName = productName;
         this.quantity = quantity;
         this.price = price;
     }

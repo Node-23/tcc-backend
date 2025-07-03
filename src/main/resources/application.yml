@@ -51,6 +51,10 @@ server:
   port: 8080
 
 logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
   file:
     path: home/log
   pattern:

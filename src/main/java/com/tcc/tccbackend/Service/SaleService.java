@@ -97,7 +97,7 @@ public class SaleService {
             product.setQuantity(product.getQuantity() - itemDTO.quantity());
             productsToUpdate.add(product);
 
-            newSale.addSaleItem(new SaleItem(itemDTO.productId(), itemDTO.quantity(), itemDTO.price()));
+            newSale.addSaleItem(new SaleItem(itemDTO.productId(), itemDTO.productName(), itemDTO.quantity(), itemDTO.price()));
         }
 
         newSale.setTotal(newSale.getItems().stream().map(SaleItem::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add));
@@ -174,7 +174,7 @@ public class SaleService {
             product.setQuantity(product.getQuantity() - itemDTO.quantity());
             productsToUpdate.add(product);
 
-            existingSale.addSaleItem(new SaleItem(itemDTO.productId(), itemDTO.quantity(), itemDTO.price()));
+            existingSale.addSaleItem(new SaleItem(itemDTO.productId(), itemDTO.productName(), itemDTO.quantity(), itemDTO.price()));
         }
 
         ValidateSale(existingSale);
@@ -241,7 +241,7 @@ public class SaleService {
                 .orElseThrow(() -> new InvalidDataException("Funcionário não encontrado para a venda com ID: " + sale.getId()));
 
         List<SaleItemDTO> itemDTOs = sale.getItems().stream()
-                .map(item -> new SaleItemDTO(item.getProductId(), item.getQuantity(), item.getPrice()))
+                .map(item -> new SaleItemDTO(item.getProductId(), item.getProductName() ,item.getQuantity(), item.getPrice()))
                 .collect(Collectors.toList());
 
         return new OutputSaleDTO(
