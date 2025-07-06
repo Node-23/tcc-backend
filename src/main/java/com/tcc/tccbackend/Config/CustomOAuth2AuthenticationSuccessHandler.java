@@ -26,11 +26,8 @@ public class CustomOAuth2AuthenticationSuccessHandler implements AuthenticationS
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
-
         String jwtToken = jwtService.generateToken(authentication);
-
-        String targetUrl = frontendUrl;
-
+        String targetUrl = frontendUrl + "?token=" + jwtToken;
         response.sendRedirect(targetUrl);
     }
 }

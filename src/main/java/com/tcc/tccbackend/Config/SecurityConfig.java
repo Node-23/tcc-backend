@@ -48,14 +48,13 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/**")
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/register/", "/authenticate", "/api/auth/login", "/oauth2/**", "/login/oauth2/code/google", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/auth/register", "/authenticate", "/api/auth/login", "/oauth2/**", "/login**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2Login -> oauth2Login
@@ -69,8 +68,7 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of("http://localhost:4200"));
-
+        config.setAllowedOrigins(List.of("http://localhost:4200", "https://54.144.81.161"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
 
